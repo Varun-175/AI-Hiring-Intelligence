@@ -2,8 +2,12 @@ from src.ingestion.candidate_loader import CandidateLoader
 from src.validation.schema_validator import SchemaValidator
 from src.preprocessing.candidate_normalizer import CandidateNormalizer
 from src.jd_understanding.jd_loader import JDLoader
-from src.jd_understanding.jd_loader import JDLoader
 from src.jd_understanding.jd_parser import JDParser
+from src.retrieval.retriever import CandidateRetriever
+from src.feature_engineering.feature_engine import FeatureEngine
+from src.ranking.ranker import CandidateRanker
+from src.submission.submission_generator import SubmissionGenerator
+
 
 def main():
     print("=" * 50)
@@ -13,6 +17,7 @@ def main():
     # Initialize modules
     loader = CandidateLoader("data/raw/candidates.jsonl")
     validator = SchemaValidator("data/raw/candidate_schema.json")
+
     # Load JD
     jd_loader = JDLoader("data/raw/job_description.docx")
     jd_text = jd_loader.load()
@@ -22,25 +27,22 @@ def main():
     job = parser.parse(jd_text)
 
     normalized_count = 0
+    normalized_candidates = []
 
     print("\nFirst 3 Normalized Candidates")
     print("-" * 50)
 
     # Complete Pipeline
     for raw_candidate in loader.load_candidates():
-
-        # Validate candidate
         is_valid = validator.validate(raw_candidate)
 
         if not is_valid:
             continue
 
-        # Normalize candidate
         candidate = CandidateNormalizer.normalize(raw_candidate)
-
+        normalized_candidates.append(candidate)
         normalized_count += 1
 
-        # Print only first 3 candidates
         if normalized_count <= 3:
             print(candidate)
             print("-" * 50)
@@ -67,15 +69,14 @@ def main():
     print("✓ Candidate Loader")
     print("✓ Schema Validator")
     print("✓ Candidate Normalizer")
-    print("\nReady for Feature Engineering 🚀")
-
-    jd_loader = JDLoader("data/raw/job_description.docx")
-
-    jd_text = jd_loader.load()
+    print("✓ Candidate Retriever")
+    print("✓ Feature Engine")
+    print("✓ Candidate Ranker")
+    print("\nReady for Ranking 🚀")
 
     print("\nJob Description")
     print("-" * 50)
-    print(jd_text[:1000])   # Print first 1000 characters
+    print(jd_text[:1000])
 
     print("\nParsed Job")
     print("-" * 40)
@@ -83,6 +84,67 @@ def main():
     print(f"Experience : {job.experience_required}")
     print(f"Location   : {job.location}")
     print(f"Skills     : {job.required_skills}")
+
+    # Retrieval step
+    retriever = CandidateRetriever()
+    top_candidates = retriever.retrieve(
+        job,
+        normalized_candidates,
+        top_k=10
+    )
+
+    print("\nTop Retrieved Candidates")
+    print("-" * 50)
+
+    for rank, (score, candidate) in enumerate(top_candidates, start=1):
+        print(
+            f"{rank:02d}. "
+            f"{candidate.candidate_id} | "
+            f"{candidate.current_title} | "
+            f"Score = {score}"
+        )
+
+    # Feature Engineering step
+    engine = FeatureEngine()
+
+    print("\nTop Candidate Scores")
+    print("-" * 60)
+
+    for score, candidate in top_candidates:
+        features = engine.compute(job, candidate)
+
+        print(
+            f"{candidate.candidate_id} | "
+            f"{candidate.current_title} | "
+            f"Final={features['final']:.2f}"
+        )
+
+    # Ranking step
+    ranker = CandidateRanker()
+
+    ranked_candidates = ranker.rank(
+        job,
+        [candidate for _, candidate in top_candidates],
+        top_k=10,
+    )
+
+    print("\nFinal Ranked Candidates")
+    print("-" * 80)
+
+    for idx, item in enumerate(ranked_candidates, start=1):
+        candidate = item["candidate"]
+
+        print(
+            f"{idx:02d}. "
+            f"{candidate.candidate_id} | "
+            f"{candidate.current_title} | "
+            f"{item['score']:.2f}"
+        )
+    
+    generator = SubmissionGenerator()
+
+    output_file = generator.generate(ranked_candidates)
+    print(f"\nSubmission generated at: {output_file}")
 
 
 if __name__ == "__main__":
