@@ -1,0 +1,10 @@
+numpy
+pandas
+scikit-learn
+sentence-transformers
+rank-bm25
+rapidfuzz
+tqdm
+pyyaml
+python-docx
+matplotlib
