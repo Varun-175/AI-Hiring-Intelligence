@@ -1,0 +1,51 @@
+data:
+  candidates_path: data/raw/candidates.jsonl
+  schema_path: data/raw/candidate_schema.json
+  job_description_path: data/raw/job_description.docx
+
+output:
+  submission_path: outputs/submission.csv
+  save_logs: true
+  save_cache: true
+
+retrieval:
+  bm25_top_k: 2000
+  semantic_top_k: 1000
+  final_retrieval_top_k: 500
+  rrf_k: 60
+  bm25_weight: 1.0
+  semantic_weight: 1.2
+  embedding_batch_size: 512
+
+ranking:
+  final_top_k: 100
+  rerank_top_k: 50
+  cross_encoder_batch_size: 64
+
+models:
+  semantic_retriever: BAAI/bge-small-en-v1.5
+  cross_encoder: cross-encoder/ms-marco-MiniLM-L-6-v2
+  local_files_only: true
+  normalize_embeddings: true
+
+cache:
+  embedding_cache_dir: data/cache
+  use_embedding_cache: true
+  use_query_cache: true
+
+pipeline:
+  enable_semantic: true
+  enable_cross_encoder: true
+  enable_submission: true
+  enable_explainability: true
+
+performance:
+  num_workers: 8
+  prefetch_candidates: true
+  memory_map_embeddings: true
+  deterministic: true
+
+logging:
+  level: INFO
+  show_progress_bar: true
+  profile_execution: true

@@ -1,295 +1,360 @@
-# AI Hiring Intelligence Engine
+AI Hiring Intelligence Engine
+An end-to-end intelligent candidate discovery and ranking system that combines lexical retrieval, semantic search, feature engineering, recruiter intelligence, and cross-encoder reranking to identify the most suitable candidates for a given Job Description.
 
-An AI-powered candidate retrieval and ranking system built for the Redrob AI Hiring Challenge.
+Overview
+Traditional resume search relies heavily on keyword matching, causing highly relevant candidates to be missed while keyword-heavy but unsuitable profiles appear at the top.
 
-The system processes over **100,000 candidate profiles**, intelligently retrieves the most relevant candidates for a given job description, ranks them using multiple recruiter-inspired signals, and generates a submission-ready output.
+This project solves that problem using a multi-stage AI ranking pipeline that combines:
 
----
+BM25 lexical retrieval
 
-# Overview
+Semantic embedding search
 
-Traditional recruitment systems rely heavily on keyword matching, often resulting in poor candidate recommendations.
+Hybrid retrieval using Reciprocal Rank Fusion (RRF)
 
-This project adopts a **multi-stage AI pipeline** that mimics how experienced recruiters evaluate talent by considering:
+Domain-specific feature engineering
 
-- Technical expertise
-- Career progression
-- Behavioral signals
-- Profile consistency
-- Job relevance
+Recruiter intelligence scoring
 
----
+Cross-Encoder reranking
 
-# Current Architecture
+Explainable recruiter-friendly output
 
-```
-                    Job Description
-                           │
-                           ▼
-                     JD Loader
-                           │
-                           ▼
-                     JD Parser
-                           │
-                           ▼
-                     Job Object
-                           │
-                           ▼
+The system is designed for large-scale candidate datasets (100K+) while remaining modular, configurable, and production-ready.
 
-Candidates.jsonl
-       │
-       ▼
-Candidate Loader
-       │
-       ▼
-Schema Validator
-       │
-       ▼
-Candidate Normalizer
-       │
-       ▼
-Candidate Objects
-       │
-       ▼
-Candidate Retriever
-       │
-       ▼
+Architecture
+                   Job Description (.docx)
+                             │
+                             ▼
+                      JD Loader & Parser
+                             │
+                             ▼
+                  Structured Job Object
+                             │
+                             ▼
+               Candidate Dataset (100K+)
+                             │
+                             ▼
+                  Candidate Normalization
+                             │
+                             ▼
+                     Hybrid Retrieval
+          ┌───────────────────────────────────┐
+          │                                   │
+          │   BM25 Retriever                  │
+          │   Semantic Retriever              │
+          │                                   │
+          └──────────────┬────────────────────┘
+                         │
+              Reciprocal Rank Fusion
+                         │
+                         ▼
+               Candidate Feature Engine
+                         │
+                         ▼
+             Recruiter Intelligence Layer
+                         │
+                         ▼
+                 Candidate Ranking
+                         │
+                         ▼
+              Cross Encoder Re-ranking
+                         │
+                         ▼
+            Recruiter Explanation Engine
+                         │
+                         ▼
+                Submission Generator
+Features
+Hybrid Retrieval
+BM25 lexical retrieval
+
+Semantic embedding retrieval
+
+Reciprocal Rank Fusion (RRF)
+
+Large dataset support
+
+Cached embeddings
+
+Configurable retrieval depth
+
 Feature Engineering
-       │
-       ▼
-Ranking Engine
-       │
-       ▼
-Submission Generator
-       │
-       ▼
-submission.csv
-```
+Each shortlisted candidate is evaluated using multiple independent feature groups.
 
----
+Technical Features
+Required skill coverage
 
-# Project Structure
+Preferred skill coverage
 
-```
+Alias matching
+
+Text-based skill extraction
+
+Profile similarity
+
+Career Features
+Experience match
+
+Relevant AI experience
+
+Leadership progression
+
+Job stability
+
+Title similarity
+
+Behavioral Features
+Recruiter response rate
+
+GitHub activity
+
+Interview completion
+
+Offer acceptance
+
+Assessment scores
+
+Profile completeness
+
+Consistency Features
+Resume completeness
+
+Career consistency
+
+Experience validation
+
+Skill evidence verification
+
+Recruiter Intelligence
+Additional recruiter-centric scoring including:
+
+AI specialization
+
+Vector database experience
+
+LLM expertise
+
+Retrieval systems
+
+Cloud exposure
+
+Education quality
+
+Availability
+
+Verification signals
+
+Recruiter engagement
+
+Candidate confidence score
+
+Cross Encoder Re-ranking
+Final ranking refinement using a transformer CrossEncoder.
+
+Benefits:
+
+Better semantic understanding
+
+Context-aware ranking
+
+Improved ordering of top candidates
+
+Explainability
+Every recommendation includes recruiter-friendly explanations such as:
+
+Matching skills
+
+Relevant experience
+
+AI expertise
+
+Cloud exposure
+
+Behavioral strengths
+
+Profile quality
+
+Project Structure
 AI-Hiring-Intelligence/
-
+│
 ├── configs/
+│   ├── settings.yaml
+│   └── weights.yaml
 │
 ├── data/
 │   ├── raw/
-│   ├── processed/
 │   └── cache/
 │
 ├── outputs/
 │
 ├── src/
-│   ├── ingestion/
-│   ├── preprocessing/
-│   ├── validation/
-│   ├── jd_understanding/
-│   ├── retrieval/
+│   ├── evaluation/
 │   ├── feature_engineering/
+│   ├── jd_understanding/
+│   ├── loaders/
+│   ├── models/
+│   ├── orchestrator/
+│   ├── preprocessing/
 │   ├── ranking/
+│   ├── reranking/
+│   ├── retrieval/
 │   ├── submission/
-│   └── models/
+│   ├── utils/
+│   └── validation/
 │
-├── tests/
-│
-├── requirements.txt
 ├── run.py
+├── requirements.txt
 └── README.md
-```
+Retrieval Pipeline
+Stage 1 — BM25 Retrieval
+Fast lexical search
 
----
+Keyword relevance
 
-# Features Implemented
+Retrieves top candidate shortlist
 
-## Data Pipeline
+↓
 
-- Candidate Loader
-- Schema Validation
-- Candidate Normalization
+Stage 2 — Semantic Retrieval
+SentenceTransformer embeddings
 
----
+Cached embeddings
 
-## Job Understanding
+Cosine similarity search
 
-- Job Description Loader
-- Job Parser
-- Structured Job Object
+↓
 
----
+Stage 3 — Reciprocal Rank Fusion
+Combines lexical and semantic rankings into one robust shortlist.
 
-## Retrieval
+Ranking Pipeline
+Each retrieved candidate is scored using:
 
-Current Version
+Technical Score
+        +
+Career Score
+        +
+Behavioral Score
+        +
+Consistency Score
+        +
+Recruiter Intelligence
+        ↓
+Weighted Candidate Score
+        ↓
+Cross Encoder Re-ranking
+        ↓
+Final Ranking
+Configuration
+Most parameters are configurable through YAML.
 
-- Keyword-based retrieval
-- Skill overlap
-- Title overlap
-- Summary overlap
+Examples include:
 
-Returns Top-K candidates.
+Retrieval
+BM25 Top-K
 
----
+Semantic Top-K
 
-## Feature Engineering
+RRF constant
 
-Current feature groups
+Models
+Sentence Transformer model
 
-- Technical Features
-- Career Features
-- Behavioral Features
-- Consistency Features
+Cross Encoder model
 
----
+Ranking
+Feature weights
 
-## Ranking
+Blending ratios
 
-Weighted scoring model
+Reranking weights
 
-```
-Technical      40%
-Career         25%
-Behavioral     20%
-Consistency    15%
-```
+Performance Optimizations
+Cached semantic embeddings
 
-Produces ranked candidates.
+Singleton model loading
 
----
+Float32 optimization
 
-## Submission
+Memory-mapped embedding cache
 
-Automatically generates
+Cached query embeddings
 
-```
-outputs/submission.csv
-```
+Cached tokenization
 
----
+Efficient NumPy Top-K retrieval
 
-# Technology Stack
+Batch inference
 
-| Component | Technology |
-|------------|------------|
-| Language | Python 3.11 |
-| Data Processing | Pandas |
-| Numerical Computing | NumPy |
-| Machine Learning | Scikit-learn |
-| NLP | Sentence Transformers *(planned)* |
-| Retrieval | BM25 *(planned)* |
-| Similarity | RapidFuzz |
-| Documents | python-docx |
+Configurable batch sizes
 
----
-
-# Current Pipeline
-
-```
-Load Dataset
-      ↓
-Validate Dataset
-      ↓
-Normalize Candidates
-      ↓
-Load Job Description
-      ↓
-Parse Job Description
-      ↓
-Retrieve Candidates
-      ↓
-Compute Features
-      ↓
-Rank Candidates
-      ↓
-Generate Submission
-```
-
----
-
-# Output
-
-The system currently generates
-
-```
-outputs/submission.csv
-```
-
-Example
-
-```
-rank,candidate_id,score,reason
-1,CAND_0088025,56.25,
-2,CAND_0006567,52.50,
-...
-```
-
----
-
-# Roadmap
-
-## Completed
-
-- Project setup
-- Candidate Loader
-- Schema Validator
-- Candidate Normalizer
-- Job Loader
-- Job Parser
-- Candidate Retriever
-- Feature Engineering
-- Ranking Engine
-- Submission Generator
-
----
-
-## In Progress
-
-- Recruiter Intelligence
-- Better Feature Engineering
-
----
-
-## Planned
-
-- Hybrid Retrieval (BM25 + Semantic Search)
-- Cross Encoder Re-ranking
-- Explanation Generation
-- Runtime Optimization
-- Evaluation Metrics
-- Final Competition Submission
-
----
-
-# Running the Project
-
-Install dependencies
-
-```bash
-pip install -r requirements.txt
-```
-
-Run
-
-```bash
-python run.py
-```
+Hybrid retrieval reduces expensive semantic search space
 
 Output
+The final submission contains:
 
-```
+Rank	Candidate ID	Score	Explanation
+1	CAND_xxxxx	96.42	Recruiter-friendly explanation
+2	CAND_xxxxx	95.87	Recruiter-friendly explanation
+Technologies Used
+Python
+
+NumPy
+
+Sentence Transformers
+
+CrossEncoder
+
+Rank-BM25
+
+PyYAML
+
+python-docx
+
+Running the Project
+Install dependencies:
+
+pip install -r requirements.txt
+Run the pipeline:
+
+python run.py
+Generated output:
+
 outputs/submission.csv
-```
+Future Improvements
+FAISS/HNSW vector indexing
 
----
+GPU acceleration
 
-# Team
+ONNX model optimization
 
-Developed as part of the **Redrob AI Hiring Challenge**.
+Learning-to-Rank (LambdaMART/XGBoost)
 
----
+Feedback-driven ranking
 
-# Vision
+Real-time candidate indexing
 
-The goal of this project is to move beyond traditional resume matching and build a recruiter-inspired AI system capable of identifying the most relevant candidates using technical expertise, career progression, behavioral intelligence, and explainable ranking.
+REST API deployment
+
+Distributed retrieval for million-scale datasets
+
+Key Highlights
+Hybrid Retrieval (BM25 + Semantic Search)
+
+Multi-stage AI Ranking Pipeline
+
+Recruiter Intelligence Layer
+
+Explainable AI Recommendations
+
+Cross-Encoder Re-ranking
+
+Configurable YAML-based architecture
+
+Modular and production-oriented design
+
+Optimized for large candidate datasets (100K+)
+
+License
+This project was developed for the AI Hiring Intelligence Challenge and is intended for educational, research, and demonstration purposes.

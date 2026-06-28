@@ -1,150 +1,234 @@
+import time
+
 from src.ingestion.candidate_loader import CandidateLoader
 from src.validation.schema_validator import SchemaValidator
 from src.preprocessing.candidate_normalizer import CandidateNormalizer
+
 from src.jd_understanding.jd_loader import JDLoader
 from src.jd_understanding.jd_parser import JDParser
-from src.retrieval.retriever import CandidateRetriever
-from src.feature_engineering.feature_engine import FeatureEngine
+
+from src.retrieval.hybrid_retriever import HybridRetriever
 from src.ranking.ranker import CandidateRanker
 from src.submission.submission_generator import SubmissionGenerator
 
+from src.reranking.cross_encoder_reranker import CrossEncoderReranker
 
-def main():
-    print("=" * 50)
-    print("AI Hiring Intelligence Engine")
-    print("=" * 50)
 
-    # Initialize modules
-    loader = CandidateLoader("data/raw/candidates.jsonl")
-    validator = SchemaValidator("data/raw/candidate_schema.json")
+# ==========================================================
+# Configuration
+# ==========================================================
 
-    # Load JD
-    jd_loader = JDLoader("data/raw/job_description.docx")
-    jd_text = jd_loader.load()
+DATASET_PATH = "data/raw/candidates.jsonl"
+SCHEMA_PATH = "data/raw/candidate_schema.json"
+JD_PATH = "data/raw/job_description.docx"
 
-    # Parse JD
+RETRIEVAL_TOP_K = 500
+FINAL_TOP_K = 100
+
+
+# ==========================================================
+# Candidate Pipeline
+# ==========================================================
+
+def load_candidates():
+    print("\n[1/5] Loading candidates...")
+
+    loader = CandidateLoader(DATASET_PATH)
+    validator = SchemaValidator(SCHEMA_PATH)
+
+    candidates = []
+
+    for raw in loader.load_candidates():
+
+        if validator.validate(raw):
+            candidates.append(
+                CandidateNormalizer.normalize(raw)
+            )
+
+    stats = loader.get_statistics()
+
+    print(f"Loaded Candidates : {len(candidates):,}")
+    print(f"Invalid Records   : {stats['invalid_records']}")
+
+    return candidates
+
+
+# ==========================================================
+# Job Pipeline
+# ==========================================================
+
+def load_job():
+
+    print("\n[2/5] Loading Job Description...")
+
+    loader = JDLoader(JD_PATH)
+
     parser = JDParser()
-    job = parser.parse(jd_text)
 
-    normalized_count = 0
-    normalized_candidates = []
+    job = parser.parse(loader.load())
 
-    print("\nFirst 3 Normalized Candidates")
-    print("-" * 50)
+    print(f"Job Title : {job.title}")
+    print(f"Experience: {job.experience_required} Years")
+    print(f"Skills    : {len(job.required_skills)}")
 
-    # Complete Pipeline
-    for raw_candidate in loader.load_candidates():
-        is_valid = validator.validate(raw_candidate)
+    return job
 
-        if not is_valid:
-            continue
 
-        candidate = CandidateNormalizer.normalize(raw_candidate)
-        normalized_candidates.append(candidate)
-        normalized_count += 1
+# ==========================================================
+# Retrieval
+# ==========================================================
 
-        if normalized_count <= 3:
-            print(candidate)
-            print("-" * 50)
+def retrieve_candidates(job, candidates):
 
-    # Loader Statistics
-    print("\nLoader Statistics")
-    print("-" * 30)
-    for key, value in loader.get_statistics().items():
-        print(f"{key}: {value}")
+    print("\n[3/5] Hybrid Retrieval...")
 
-    # Schema Validation Statistics
-    print("\nSchema Validation")
-    print("-" * 30)
-    for key, value in validator.get_statistics().items():
-        print(f"{key}: {value}")
+    retriever = HybridRetriever(candidates)
 
-    # Normalization Statistics
-    print("\nNormalization")
-    print("-" * 30)
-    print(f"Normalized Candidates : {normalized_count}")
-
-    print("\nPipeline Status")
-    print("-" * 30)
-    print("✓ Candidate Loader")
-    print("✓ Schema Validator")
-    print("✓ Candidate Normalizer")
-    print("✓ Candidate Retriever")
-    print("✓ Feature Engine")
-    print("✓ Candidate Ranker")
-    print("\nReady for Ranking 🚀")
-
-    print("\nJob Description")
-    print("-" * 50)
-    print(jd_text[:1000])
-
-    print("\nParsed Job")
-    print("-" * 40)
-    print(f"Title      : {job.title}")
-    print(f"Experience : {job.experience_required}")
-    print(f"Location   : {job.location}")
-    print(f"Skills     : {job.required_skills}")
-
-    # Retrieval step
-    retriever = CandidateRetriever()
-    top_candidates = retriever.retrieve(
+    retrieved = retriever.retrieve(
         job,
-        normalized_candidates,
-        top_k=10
+        top_k=RETRIEVAL_TOP_K
     )
 
-    print("\nTop Retrieved Candidates")
-    print("-" * 50)
+    print(f"Retrieved {len(retrieved)} candidates")
 
-    for rank, (score, candidate) in enumerate(top_candidates, start=1):
-        print(
-            f"{rank:02d}. "
-            f"{candidate.candidate_id} | "
-            f"{candidate.current_title} | "
-            f"Score = {score}"
-        )
+    return retrieved
 
-    # Feature Engineering step
-    engine = FeatureEngine()
 
-    print("\nTop Candidate Scores")
-    print("-" * 60)
+# ==========================================================
+# Ranking
+# ==========================================================
 
-    for score, candidate in top_candidates:
-        features = engine.compute(job, candidate)
+def rank_candidates(job, candidates):
 
-        print(
-            f"{candidate.candidate_id} | "
-            f"{candidate.current_title} | "
-            f"Final={features['final']:.2f}"
-        )
+    print("\n[4/5] Ranking candidates...")
 
-    # Ranking step
     ranker = CandidateRanker()
 
-    ranked_candidates = ranker.rank(
+    ranked = ranker.rank(
         job,
-        [candidate for _, candidate in top_candidates],
-        top_k=10,
+        candidates,
+        top_k=FINAL_TOP_K
     )
 
-    print("\nFinal Ranked Candidates")
-    print("-" * 80)
+    print(f"Top {FINAL_TOP_K} candidates selected")
 
-    for idx, item in enumerate(ranked_candidates, start=1):
+    return ranked
+
+
+# ==========================================================
+# Submission
+# ==========================================================
+
+def generate_submission(ranked):
+
+    print("\n[5/5] Generating Submission...")
+
+    generator = SubmissionGenerator()
+
+    output = generator.generate(ranked)
+
+    print(f"Submission Saved : {output}")
+
+
+# ==========================================================
+# Preview
+# ==========================================================
+
+def preview(ranked):
+
+    print("\n")
+    print("=" * 90)
+    print("TOP 10 CANDIDATES")
+    print("=" * 90)
+
+    print(
+        f"{'Rank':<6}"
+        f"{'Candidate ID':<18}"
+        f"{'Score':<10}"
+        f"{'Current Role'}"
+    )
+
+    print("-" * 90)
+
+    for rank, item in enumerate(ranked[:10], start=1):
+
         candidate = item["candidate"]
 
         print(
-            f"{idx:02d}. "
-            f"{candidate.candidate_id} | "
-            f"{candidate.current_title} | "
-            f"{item['score']:.2f}"
+            f"{rank:<6}"
+            f"{candidate.candidate_id:<18}"
+            f"{item['score']:>8.2f}   "
+            f"{candidate.current_title}"
         )
-    
-    generator = SubmissionGenerator()
 
-    output_file = generator.generate(ranked_candidates)
-    print(f"\nSubmission generated at: {output_file}")
+
+# ==========================================================
+# Main
+# ==========================================================
+
+def main():
+
+    start = time.time()
+
+    print("=" * 90)
+    print("          AI HIRING INTELLIGENCE ENGINE")
+    print("=" * 90)
+
+    # ---------------------------------------------------
+    # Step 1 : Load Candidates
+    # ---------------------------------------------------
+    candidates = load_candidates()
+
+    # ---------------------------------------------------
+    # Step 2 : Load Job Description
+    # ---------------------------------------------------
+    job = load_job()
+
+    # ---------------------------------------------------
+    # Step 3 : Hybrid Retrieval
+    # ---------------------------------------------------
+    retrieved = retrieve_candidates(job, candidates)
+
+    # ---------------------------------------------------
+    # Step 4 : Feature Ranking
+    # ---------------------------------------------------
+    ranked = rank_candidates(
+        job,
+        retrieved
+    )
+
+    # ---------------------------------------------------
+    # Step 5 : Cross Encoder Re-ranking
+    # ---------------------------------------------------
+    print("\n[4.5/5] CrossEncoder Re-ranking...")
+
+    reranker = CrossEncoderReranker()
+
+    ranked = reranker.rerank(
+        job,
+        ranked
+    )
+
+    # ---------------------------------------------------
+    # Step 6 : Preview
+    # ---------------------------------------------------
+    preview(ranked)
+
+    # ---------------------------------------------------
+    # Step 7 : Submission
+    # ---------------------------------------------------
+    generate_submission(ranked)
+
+    end = time.time()
+
+    execution_time = end - start
+
+    print("\n" + "=" * 90)
+    print("PIPELINE COMPLETED SUCCESSFULLY")
+    print("=" * 90)
+    print(f"Execution Time : {execution_time:.2f} seconds")
+    print(f"Candidates/sec : {len(candidates) / execution_time:.2f}")
+    print("=" * 90)
 
 
 if __name__ == "__main__":
