@@ -266,15 +266,16 @@ class RecruiterIntelligence:
             candidate_skills = TechnicalFeatures._skill_set(candidate.skills)
             candidate._cached_skills_set = candidate_skills
 
-        required_skills = getattr(job, "_cached_required_skills_set", None)
-        if required_skills is None:
-            required_skills = TechnicalFeatures._skill_set(job.required_skills)
-            job._cached_required_skills_set = required_skills
-
-        preferred_skills = getattr(job, "_cached_preferred_skills_set", None)
-        if preferred_skills is None:
-            preferred_skills = TechnicalFeatures._skill_set(job.preferred_skills)
-            job._cached_preferred_skills_set = preferred_skills
+        required_skills = {
+            TechnicalFeatures._normalize_skill(skill)
+            for skill in getattr(job, "required_skills", [])
+            if skill
+        }
+        preferred_skills = {
+            TechnicalFeatures._normalize_skill(skill)
+            for skill in getattr(job, "preferred_skills", [])
+            if skill
+        }
 
         text = cls._candidate_text(candidate)
 
@@ -335,7 +336,11 @@ class RecruiterIntelligence:
             + education * 0.05
         )
 
-        matched_required = sorted(candidate_skills & required_skills)
+        matched_required = sorted(
+            skill
+            for skill in required_skills
+            if skill in candidate_skills or TechnicalFeatures._skill_in_text(skill, text)
+        )
 
         return {
             "technical": technical,

@@ -26,11 +26,8 @@ class HybridRetriever:
 
         self.bm25 = BM25Retriever(candidates)
 
-        enable_semantic = get_nested(config, ["pipeline", "enable_semantic"], True)
-        if enable_semantic:
-            self.semantic = SemanticRetriever(candidates)
-        else:
-            self.semantic = None
+        self.enable_semantic = get_nested(config, ["pipeline", "enable_semantic"], True)
+        self.semantic = None
 
         self.bm25_top_k = get_nested(
             config,
@@ -74,7 +71,6 @@ class HybridRetriever:
                 None,
                 [
                     job.title,
-                    getattr(job, "summary", ""),
                     " ".join(getattr(job, "required_skills", [])),
                     " ".join(getattr(job, "preferred_skills", [])),
                 ],
@@ -175,14 +171,17 @@ class HybridRetriever:
 
         print("\n[Hybrid] Stage 2 : Semantic Retrieval")
 
-        semantic_results = self.semantic.retrieve(
-            query=query,
-            candidates=shortlist,          # <- only score BM25 shortlist
-            top_k=min(
-                self.semantic_top_k,
-                len(shortlist),
-            ),
-        )
+        if self.enable_semantic:
+            self.semantic = SemanticRetriever(shortlist)
+            semantic_results = self.semantic.retrieve(
+                query=query,
+                top_k=min(
+                    self.semantic_top_k,
+                    len(shortlist),
+                ),
+            )
+        else:
+            semantic_results = []
 
         # ---------------------------------------------------------
         # Stage 3 : Fusion

@@ -116,12 +116,9 @@ class SemanticRetriever:
 
         digest.update(self.model_name.encode())
 
-        digest.update(str(len(self.candidates)).encode())
-
-        if self.candidates:
-            digest.update(self.candidates[0].candidate_id.encode())
-            digest.update(self.candidates[len(self.candidates)//2].candidate_id.encode())
-            digest.update(self.candidates[-1].candidate_id.encode())
+        for candidate in self.candidates:
+            digest.update(candidate.candidate_id.encode())
+            digest.update(self._candidate_text(candidate).encode("utf-8"))
 
         return digest.hexdigest()[:16]
 
@@ -184,8 +181,15 @@ class SemanticRetriever:
 
                 print("Embedding cache corrupted.")
 
-        print("Embedding cache not found. Will encode candidates on-the-fly during retrieve.")
-        return None
+        print("Generating semantic embeddings...")
+        embeddings = self._encode()
+
+        try:
+            np.save(self.cache_path, embeddings)
+        except Exception as exc:
+            print(f"Embedding cache save failed: {exc}")
+
+        return embeddings
 
     # ---------------------------------------------------------
     # Query Embedding Cache

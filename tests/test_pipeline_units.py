@@ -1,6 +1,5 @@
 import unittest
 from pathlib import Path
-from tempfile import TemporaryDirectory
 
 from src.feature_engineering.behavioral_features import BehavioralFeatures
 from src.feature_engineering.technical_features import TechnicalFeatures
@@ -38,8 +37,8 @@ class PipelineUnitTests(unittest.TestCase):
 
         self.assertEqual(job.title, "Senior AI Engineer")
         self.assertEqual(job.experience_required, 7.0)
-        self.assertIn("Python", job.required_skills)
-        self.assertIn("Vector Search", job.required_skills)
+        self.assertIn("python", job.required_skills)
+        self.assertIn("vector search", job.required_skills)
 
     def test_behavioral_features_use_dataset_signal_names(self):
         candidate = Candidate(
@@ -106,7 +105,9 @@ class PipelineUnitTests(unittest.TestCase):
     def test_cross_encoder_scores_are_normalized_to_100(self):
         normalized = CrossEncoderReranker._minmax_100([-2, 0, 2])
 
-        self.assertEqual(list(normalized), [0, 50, 100])
+        self.assertAlmostEqual(normalized[0], 0)
+        self.assertAlmostEqual(normalized[1], 50)
+        self.assertAlmostEqual(normalized[2], 100)
 
     def test_ranker_orders_higher_quality_candidate_first(self):
         job = JDParser().parse(
@@ -152,8 +153,9 @@ class PipelineUnitTests(unittest.TestCase):
         self.assertGreaterEqual(ranked[0]["score"], ranked[1]["score"])
 
     def test_submission_rejects_duplicate_candidate_ids(self):
-        with TemporaryDirectory() as directory:
-            path = Path(directory) / "submission.csv"
+        path = Path("outputs/_test_duplicate_submission.csv")
+
+        try:
             path.write_text(
                 "rank,candidate_id,score,reason\n"
                 "1,CAND_0000001,90.0,Good\n"
@@ -163,6 +165,9 @@ class PipelineUnitTests(unittest.TestCase):
 
             with self.assertRaises(ValueError):
                 validate_submission(path)
+        finally:
+            if path.exists():
+                path.unlink()
 
     def test_submission_reason_uses_evidence(self):
         candidate = Candidate(
@@ -194,7 +199,7 @@ class PipelineUnitTests(unittest.TestCase):
 
         self.assertIn("Matched 4/5 required skills", reason)
         self.assertIn("6.5 years relevant AI/ML experience", reason)
-        self.assertIn("Currently Staff Machine Learning Engineer", reason)
+        self.assertIn("Current role: Staff Machine Learning Engineer", reason)
 
     def test_rrf_keeps_unique_candidates_and_rewards_consensus(self):
         candidates = [

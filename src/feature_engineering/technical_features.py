@@ -44,6 +44,44 @@ class TechnicalFeatures:
     }
 
     TOKEN_PATTERN = re.compile(r"[a-zA-Z0-9+#.]+")
+    SKILL_KEYWORDS = {
+        "python",
+        "java",
+        "sql",
+        "spark",
+        "pyspark",
+        "airflow",
+        "kafka",
+        "docker",
+        "kubernetes",
+        "aws",
+        "azure",
+        "gcp",
+        "pytorch",
+        "tensorflow",
+        "scikit-learn",
+        "machine learning",
+        "deep learning",
+        "ai",
+        "nlp",
+        "rag",
+        "llm",
+        "langchain",
+        "transformers",
+        "fine-tuning",
+        "lora",
+        "embeddings",
+        "retrieval",
+        "ranking",
+        "vector database",
+        "vector search",
+        "faiss",
+        "milvus",
+        "pinecone",
+        "fastapi",
+        "flask",
+        "bentoml",
+    }
 
     @classmethod
     def _normalize_skill(cls, skill):

@@ -55,7 +55,9 @@ class BM25Retriever:
                     cache_data = pickle.load(f)
                 self.documents = cache_data["documents"]
                 self.bm25 = cache_data["bm25"]
-                return
+                if self.documents and getattr(self.bm25, "idf", None):
+                    return
+                print("BM25 cache invalid. Rebuilding index...")
             except Exception as e:
                 print(f"BM25 cache loading failed: {e}")
 
@@ -153,6 +155,7 @@ class BM25Retriever:
     def _query_tokens(self, query: str):
 
         tokens = self._tokenize(query)
+        tokens = list(dict.fromkeys(tokens))
 
         return tuple(tokens if tokens else [self.UNKNOWN_TOKEN])
 

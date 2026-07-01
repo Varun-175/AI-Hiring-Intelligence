@@ -33,7 +33,7 @@ class CrossEncoderReranker:
         self.cross_top_k = get_nested(
             settings,
             ["ranking", "cross_encoder_top_k"],
-            100,
+            get_nested(settings, ["ranking", "rerank_top_k"], 50),
         )
 
         self.heuristic_weight = get_nested(

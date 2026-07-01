@@ -75,10 +75,10 @@ class JDParser:
     ]
 
     TITLE_PATTERNS = [
-        r"job\s*title\s*:?\s*(.+)",
-        r"position\s*:?\s*(.+)",
-        r"role\s*:?\s*(.+)",
-        r"job\s*description\s*:?\s*(.+)",
+        r"^\s*job\s*title\s*:?\s*(.+)$",
+        r"^\s*position\s*:?\s*(.+)$",
+        r"^\s*role\s*:?\s*(.+)$",
+        r"^\s*job\s*description\s*:?\s*(.+)$",
     ]
 
     LOCATION_PATTERNS = [
@@ -98,7 +98,7 @@ class JDParser:
             match = re.search(
                 pattern,
                 text,
-                flags=re.I,
+                flags=re.I | re.M,
             )
 
             if match:
