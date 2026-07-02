@@ -1,6 +1,7 @@
 import numpy as np
 from sentence_transformers import CrossEncoder
 
+from src.utils.console import message
 from src.utils.config import get_nested, load_yaml_config
 
 
@@ -70,7 +71,7 @@ class CrossEncoderReranker:
 
         except Exception as exc:
 
-            print(f"[CrossEncoder] Disabled : {exc}")
+            message(f"[CrossEncoder] Disabled : {exc}", tone="red")
 
             self.model = None
 
@@ -136,13 +137,15 @@ class CrossEncoderReranker:
 
         top_k = top_k or self.cross_top_k
 
-        ranked_candidates = ranked_candidates[:top_k]
+        rerank_candidates = ranked_candidates[:top_k]
+        remaining_candidates = ranked_candidates[top_k:]
 
-        if not ranked_candidates:
+        if not rerank_candidates:
             return ranked_candidates
 
-        print(
-            f"\nRunning CrossEncoder on {len(ranked_candidates)} candidates..."
+        message(
+            f"Running CrossEncoder on {len(rerank_candidates)} candidates...",
+            tone="yellow",
         )
 
         job_text = self._job_text(job)
@@ -152,7 +155,7 @@ class CrossEncoderReranker:
                 job_text,
                 self._candidate_text(item["candidate"]),
             )
-            for item in ranked_candidates
+            for item in rerank_candidates
         ]
 
         raw_scores = self.model.predict(
@@ -164,7 +167,7 @@ class CrossEncoderReranker:
         normalized = self._normalize(raw_scores)
 
         for item, raw, norm in zip(
-            ranked_candidates,
+            rerank_candidates,
             raw_scores,
             normalized,
         ):
@@ -183,7 +186,7 @@ class CrossEncoderReranker:
                 2,
             )
 
-        ranked_candidates.sort(
+        rerank_candidates.sort(
             key=lambda item: (
                 -item["score"],
                 -item["cross_score_normalized"],
@@ -191,4 +194,12 @@ class CrossEncoderReranker:
             )
         )
 
-        return ranked_candidates
+        combined_candidates = rerank_candidates + remaining_candidates
+        combined_candidates.sort(
+            key=lambda item: (
+                -item["score"],
+                item["candidate"].candidate_id,
+            )
+        )
+
+        return combined_candidates

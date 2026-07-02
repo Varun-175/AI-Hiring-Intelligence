@@ -7,6 +7,7 @@ import numpy as np
 from sentence_transformers import SentenceTransformer
 
 
+from src.utils.console import message
 from src.utils.config import get_nested, load_yaml_config
 
 
@@ -102,7 +103,7 @@ class SemanticRetriever:
 
         except Exception as exc:
 
-            print(f"[Semantic] Disabled : {exc}")
+            message(f"[Semantic] Disabled : {exc}", tone="red")
 
             return None
 
@@ -161,7 +162,7 @@ class SemanticRetriever:
 
             try:
 
-                print("Loading cached embeddings...")
+                message("Loading cached embeddings...", tone="yellow")
 
                 embeddings = np.load(
                     self.cache_path,
@@ -175,19 +176,19 @@ class SemanticRetriever:
 
                     return embeddings
 
-                print("Embedding cache mismatch.")
+                message("Embedding cache mismatch.", tone="yellow")
 
             except Exception:
 
-                print("Embedding cache corrupted.")
+                message("Embedding cache corrupted.", tone="yellow")
 
-        print("Generating semantic embeddings...")
+        message("Generating semantic embeddings...", tone="yellow")
         embeddings = self._encode()
 
         try:
             np.save(self.cache_path, embeddings)
         except Exception as exc:
-            print(f"Embedding cache save failed: {exc}")
+            message(f"Embedding cache save failed: {exc}", tone="red")
 
         return embeddings
 

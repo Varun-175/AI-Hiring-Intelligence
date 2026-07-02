@@ -245,6 +245,13 @@ class SubmissionGenerator:
     # ---------------------------------------------------------
 
     def generate(self, ranked_candidates):
+        ranked_candidates = sorted(
+            ranked_candidates,
+            key=lambda item: (
+                -round(float(item["score"]), 2),
+                item["candidate"].candidate_id,
+            ),
+        )
 
         with self.output_path.open(
             "w",
@@ -259,10 +266,10 @@ class SubmissionGenerator:
 
             writer.writerow(
                 [
-                    "rank",
                     "candidate_id",
+                    "rank",
                     "score",
-                    "reason",
+                    "reasoning",
                 ]
             )
 
@@ -273,8 +280,8 @@ class SubmissionGenerator:
 
                 writer.writerow(
                     [
-                        rank,
                         item["candidate"].candidate_id,
+                        rank,
                         round(
                             float(item["score"]),
                             2,

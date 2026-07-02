@@ -5,6 +5,7 @@ from typing import List, Tuple
 
 import numpy as np
 from rank_bm25 import BM25Okapi
+from src.utils.console import message
 
 
 class BM25Retriever:
@@ -50,18 +51,18 @@ class BM25Retriever:
 
         if self.cache_path.exists():
             try:
-                print("Loading cached BM25 index...")
+                message("Loading cached BM25 index...", tone="yellow")
                 with self.cache_path.open("rb") as f:
                     cache_data = pickle.load(f)
                 self.documents = cache_data["documents"]
                 self.bm25 = cache_data["bm25"]
                 if self.documents and getattr(self.bm25, "idf", None):
                     return
-                print("BM25 cache invalid. Rebuilding index...")
+                message("BM25 cache invalid. Rebuilding index...", tone="yellow")
             except Exception as e:
-                print(f"BM25 cache loading failed: {e}")
+                message(f"BM25 cache loading failed: {e}", tone="red")
 
-        print("Building BM25 index...")
+        message("Building BM25 index...", tone="yellow")
         for candidate in candidates:
 
             document = self._build_document(candidate)
@@ -86,7 +87,7 @@ class BM25Retriever:
                     protocol=pickle.HIGHEST_PROTOCOL,
                 )
         except Exception as e:
-            print(f"BM25 cache saving failed: {e}")
+            message(f"BM25 cache saving failed: {e}", tone="red")
 
     # ------------------------------------------------------------------
     # Document Builder

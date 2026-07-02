@@ -157,9 +157,9 @@ class PipelineUnitTests(unittest.TestCase):
 
         try:
             path.write_text(
-                "rank,candidate_id,score,reason\n"
-                "1,CAND_0000001,90.0,Good\n"
-                "2,CAND_0000001,80.0,Duplicate\n",
+                "candidate_id,rank,score,reasoning\n"
+                "CAND_0000001,1,90.0,Good\n"
+                "CAND_0000001,2,80.0,Duplicate\n",
                 encoding="utf-8",
             )
 
@@ -200,6 +200,54 @@ class PipelineUnitTests(unittest.TestCase):
         self.assertIn("Matched 4/5 required skills", reason)
         self.assertIn("6.5 years relevant AI/ML experience", reason)
         self.assertIn("Current role: Staff Machine Learning Engineer", reason)
+
+    def test_submission_generator_writes_competition_header_order(self):
+        candidate = Candidate(candidate_id="CAND_0000001")
+        item = {
+            "candidate": candidate,
+            "score": 90.0,
+            "features": {},
+        }
+        path = Path("outputs/_test_submission_format.csv")
+
+        try:
+            SubmissionGenerator(output_path=path).generate([item])
+            lines = path.read_text(encoding="utf-8").splitlines()
+            self.assertEqual(lines[0], "candidate_id,rank,score,reasoning")
+            self.assertTrue(lines[1].startswith("CAND_0000001,1,90.0,"))
+        finally:
+            if path.exists():
+                path.unlink()
+
+    def test_reranker_preserves_candidates_beyond_top_k(self):
+        reranker = CrossEncoderReranker.__new__(CrossEncoderReranker)
+        reranker.model = object()
+        reranker.cross_top_k = 2
+        reranker.batch_size = 2
+        reranker.heuristic_weight = 0.6
+        reranker.cross_weight = 0.4
+        reranker._job_text = lambda job: "job"
+        reranker._candidate_text = lambda candidate: candidate.current_title
+
+        class FakeModel:
+            def predict(self, pairs, batch_size, show_progress_bar):
+                return [0.9, 0.1]
+
+        reranker.model = FakeModel()
+
+        ranked_candidates = [
+            {"candidate": Candidate(candidate_id="CAND_0000001", current_title="A"), "score": 90.0},
+            {"candidate": Candidate(candidate_id="CAND_0000002", current_title="B"), "score": 80.0},
+            {"candidate": Candidate(candidate_id="CAND_0000003", current_title="C"), "score": 70.0},
+        ]
+
+        result = reranker.rerank(job=object(), ranked_candidates=ranked_candidates)
+
+        self.assertEqual(len(result), 3)
+        self.assertIn(
+            "CAND_0000003",
+            [item["candidate"].candidate_id for item in result],
+        )
 
     def test_rrf_keeps_unique_candidates_and_rewards_consensus(self):
         candidates = [

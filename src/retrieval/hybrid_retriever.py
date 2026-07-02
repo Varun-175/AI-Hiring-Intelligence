@@ -2,6 +2,7 @@ from typing import Dict, List, Tuple
 
 from src.retrieval.bm25_retriever import BM25Retriever
 from src.retrieval.semantic_retriever import SemanticRetriever
+from src.utils.console import message
 from src.utils.config import get_nested, load_yaml_config
 
 
@@ -149,7 +150,7 @@ class HybridRetriever:
         # Stage 1 : BM25
         # ---------------------------------------------------------
 
-        print("\n[Hybrid] Stage 1 : BM25 Retrieval")
+        message("• Stage 1 : BM25 Retrieval", tone="yellow")
 
         bm25_results = self.bm25.retrieve(
             query=query,
@@ -161,15 +162,16 @@ class HybridRetriever:
 
         shortlist = [candidate for _, candidate in bm25_results]
 
-        print(
-            f"[Hybrid] BM25 shortlisted {len(shortlist):,} candidates"
+        message(
+            f"• BM25 shortlisted {len(shortlist):,} candidates",
+            tone="yellow",
         )
 
         # ---------------------------------------------------------
         # Stage 2 : Semantic
         # ---------------------------------------------------------
 
-        print("\n[Hybrid] Stage 2 : Semantic Retrieval")
+        message("• Stage 2 : Semantic Retrieval", tone="yellow")
 
         if self.enable_semantic:
             self.semantic = SemanticRetriever(shortlist)
@@ -187,7 +189,7 @@ class HybridRetriever:
         # Stage 3 : Fusion
         # ---------------------------------------------------------
 
-        print("\n[Hybrid] Stage 3 : Reciprocal Rank Fusion")
+        message("• Stage 3 : Reciprocal Rank Fusion", tone="yellow")
 
         fused = self._rrf(
             [bm25_results, semantic_results],
@@ -199,9 +201,7 @@ class HybridRetriever:
             for _, candidate in fused[:top_k]
         ]
 
-        print(
-            f"[Hybrid] Final Retrieved : {len(final):,}"
-        )
+        message(f"• Final Retrieved : {len(final):,}", tone="yellow")
 
         return final
     # ---------------------------------------------------------

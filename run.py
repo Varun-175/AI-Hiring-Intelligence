@@ -12,6 +12,7 @@ from src.ranking.ranker import CandidateRanker
 from src.submission.submission_generator import SubmissionGenerator
 
 from src.reranking.cross_encoder_reranker import CrossEncoderReranker
+from src.utils.console import detail, header, section_break, separator, stage, status
 
 
 # ==========================================================
@@ -24,6 +25,7 @@ JD_PATH = "data/raw/job_description.docx"
 
 RETRIEVAL_TOP_K = 500
 FINAL_TOP_K = 100
+OUTPUT_WIDTH = 80
 
 
 # ==========================================================
@@ -31,7 +33,7 @@ FINAL_TOP_K = 100
 # ==========================================================
 
 def load_candidates():
-    print("\n[1/5] Loading candidates...")
+    stage("[1/5] Loading Candidates")
 
     loader = CandidateLoader(DATASET_PATH)
     validator = SchemaValidator(SCHEMA_PATH)
@@ -47,8 +49,8 @@ def load_candidates():
 
     stats = loader.get_statistics()
 
-    print(f"Loaded Candidates : {len(candidates):,}")
-    print(f"Invalid Records   : {stats['invalid_records']}")
+    status("Loaded Candidates", f"{len(candidates):,}")
+    status("Invalid Records", stats["invalid_records"])
 
     return candidates
 
@@ -59,7 +61,8 @@ def load_candidates():
 
 def load_job():
 
-    print("\n[2/5] Loading Job Description...")
+    section_break(width=OUTPUT_WIDTH)
+    stage("[2/5] Parsing Job Description")
 
     loader = JDLoader(JD_PATH)
 
@@ -67,9 +70,9 @@ def load_job():
 
     job = parser.parse(loader.load())
 
-    print(f"Job Title : {job.title}")
-    print(f"Experience: {job.experience_required} Years")
-    print(f"Skills    : {len(job.required_skills)}")
+    detail("Title", job.title)
+    detail("Experience", f"{job.experience_required} Years")
+    detail("Skills", len(job.required_skills))
 
     return job
 
@@ -80,7 +83,8 @@ def load_job():
 
 def retrieve_candidates(job, candidates):
 
-    print("\n[3/5] Hybrid Retrieval...")
+    section_break(width=OUTPUT_WIDTH)
+    stage("[3/5] Hybrid Retrieval")
 
     retriever = HybridRetriever(candidates)
 
@@ -89,7 +93,7 @@ def retrieve_candidates(job, candidates):
         top_k=RETRIEVAL_TOP_K
     )
 
-    print(f"Retrieved {len(retrieved)} candidates")
+    status("Retrieved Candidates", len(retrieved))
 
     return retrieved
 
@@ -100,7 +104,8 @@ def retrieve_candidates(job, candidates):
 
 def rank_candidates(job, candidates):
 
-    print("\n[4/5] Ranking candidates...")
+    section_break(width=OUTPUT_WIDTH)
+    stage("[4/5] Ranking Candidates")
 
     ranker = CandidateRanker()
 
@@ -110,7 +115,9 @@ def rank_candidates(job, candidates):
         top_k=FINAL_TOP_K
     )
 
-    print(f"Top {FINAL_TOP_K} candidates selected")
+    status("Feature Engineering Complete")
+    status("Recruiter Intelligence Applied")
+    status("Top Candidates Selected", FINAL_TOP_K)
 
     return ranked
 
@@ -121,13 +128,14 @@ def rank_candidates(job, candidates):
 
 def generate_submission(ranked):
 
-    print("\n[5/5] Generating Submission...")
+    section_break(width=OUTPUT_WIDTH)
+    stage("[5/5] Generating Submission")
 
     generator = SubmissionGenerator()
 
     output = generator.generate(ranked)
 
-    print(f"Submission Saved : {output}")
+    status("Submission Saved", output)
 
 
 # ==========================================================
@@ -136,19 +144,19 @@ def generate_submission(ranked):
 
 def preview(ranked):
 
-    print("\n")
-    print("=" * 90)
+    section_break(width=OUTPUT_WIDTH)
+    print()
     print("TOP 10 CANDIDATES")
-    print("=" * 90)
+    print()
 
     print(
         f"{'Rank':<6}"
         f"{'Candidate ID':<18}"
-        f"{'Score':<10}"
+        f"{'Score':<9}"
         f"{'Current Role'}"
     )
 
-    print("-" * 90)
+    print("-" * OUTPUT_WIDTH)
 
     for rank, item in enumerate(ranked[:10], start=1):
 
@@ -157,7 +165,7 @@ def preview(ranked):
         print(
             f"{rank:<6}"
             f"{candidate.candidate_id:<18}"
-            f"{item['score']:>8.2f}   "
+            f"{item['score']:>7.2f}  "
             f"{candidate.current_title}"
         )
 
@@ -170,9 +178,8 @@ def main():
 
     start = time.time()
 
-    print("=" * 90)
-    print("          AI HIRING INTELLIGENCE ENGINE")
-    print("=" * 90)
+    print()
+    header("AI HIRING INTELLIGENCE ENGINE", width=OUTPUT_WIDTH)
 
     # ---------------------------------------------------
     # Step 1 : Load Candidates
@@ -200,7 +207,8 @@ def main():
     # ---------------------------------------------------
     # Step 5 : Cross Encoder Re-ranking
     # ---------------------------------------------------
-    print("\n[4.5/5] CrossEncoder Re-ranking...")
+    print()
+    stage("[4.5/5] Cross-Encoder Re-ranking")
 
     reranker = CrossEncoderReranker()
 
@@ -208,6 +216,7 @@ def main():
         job,
         ranked
     )
+    status("Re-ranked Top Candidates", len(ranked[:getattr(reranker, 'cross_top_k', len(ranked))]))
 
     # ---------------------------------------------------
     # Step 6 : Preview
@@ -223,12 +232,11 @@ def main():
 
     execution_time = end - start
 
-    print("\n" + "=" * 90)
-    print("PIPELINE COMPLETED SUCCESSFULLY")
-    print("=" * 90)
-    print(f"Execution Time : {execution_time:.2f} seconds")
-    print(f"Candidates/sec : {len(candidates) / execution_time:.2f}")
-    print("=" * 90)
+    print()
+    header("PIPELINE COMPLETED SUCCESSFULLY", width=OUTPUT_WIDTH)
+    detail("Execution Time", f"{execution_time:.2f} seconds", indent=0)
+    detail("Candidates/sec", f"{len(candidates) / execution_time:.2f}", indent=0)
+    separator("=", width=OUTPUT_WIDTH, tone="cyan")
 
 
 if __name__ == "__main__":
