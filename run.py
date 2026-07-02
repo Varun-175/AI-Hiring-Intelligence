@@ -12,6 +12,7 @@ from src.ranking.ranker import CandidateRanker
 from src.submission.submission_generator import SubmissionGenerator
 
 from src.reranking.cross_encoder_reranker import CrossEncoderReranker
+from src.validation.honeypot_guard import HoneypotGuard
 from src.utils.console import detail, header, section_break, separator, stage, status
 
 
@@ -217,6 +218,9 @@ def main():
         ranked
     )
     status("Re-ranked Top Candidates", len(ranked[:getattr(reranker, 'cross_top_k', len(ranked))]))
+
+    guard = HoneypotGuard()
+    ranked = guard.apply_penalty(ranked, job)
 
     # ---------------------------------------------------
     # Step 6 : Preview
